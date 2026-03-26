@@ -34,6 +34,7 @@ dependencies = [
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
+    "ruff>=0.4.0",
 ]
 
 [project.scripts]
@@ -49,6 +50,28 @@ markers = [
     "integration: Tests with real git repos on disk (deselect with '-m not integration')",
     "e2e: End-to-end CLI tests via CliRunner (deselect with '-m not e2e')",
 ]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "RUF",  # ruff-specific rules
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # do not perform function calls in argument defaults (typer uses this)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["git_pulse"]
 
 [tool.coverage.run]
 source = ["git_pulse"]

@@ -27,7 +27,9 @@ def probe_connectivity(repo_path: str, timeout: int = 15) -> bool:
         return True
     except GitCommandError as exc:
         log.warning(
-            "Connectivity probe failed via %s: %s", repo_path, exc.stderr.strip() if exc.stderr else str(exc)
+            "Connectivity probe failed via %s: %s",
+            repo_path,
+            exc.stderr.strip() if exc.stderr else str(exc),
         )
         return False
     except Exception as exc:

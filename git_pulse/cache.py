@@ -15,7 +15,6 @@ from typing import Any
 
 from git_pulse.config import CONFIG_DIR, Config, _atomic_write
 
-
 CACHE_FILE = CONFIG_DIR / "cache.json"
 
 
@@ -59,7 +58,8 @@ def load_cache() -> RepoCache | None:
     except (json.JSONDecodeError, TypeError, KeyError, OSError) as exc:
         logging.getLogger("git_pulse").warning(
             "Cache file corrupt or unreadable (%s), will rebuild: %s",
-            CACHE_FILE, exc,
+            CACHE_FILE,
+            exc,
         )
         return None
 

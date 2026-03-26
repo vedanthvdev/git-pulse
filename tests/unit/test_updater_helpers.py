@@ -9,9 +9,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
 from git import Repo
 
+from git_pulse.cache import CachedRepo
 from git_pulse.updater import (
     RepoResult,
     RepoStatus,
@@ -19,10 +19,9 @@ from git_pulse.updater import (
     _get_current_branch,
     _is_mid_rebase_or_merge,
     _is_repo_dirty,
-    _validate_repo,
     _update_branch,
+    _validate_repo,
 )
-from git_pulse.cache import CachedRepo
 from tests.helpers.git_helpers import make_bare_remote, make_local_repo, push_remote_commit
 
 
@@ -198,7 +197,7 @@ class TestValidateRepo:
         make_local_repo(local, remote)
 
         cached = CachedRepo(path=str(local), matching_branches=["master"])
-        repo, current, result = _validate_repo(cached)
+        _repo, current, result = _validate_repo(cached)
         assert result is None
         assert current == "master"
 

@@ -21,6 +21,7 @@ from git_pulse.logger import get_logger
 
 class RepoStatus(str, Enum):
     """Possible outcomes for a single repo update. str mixin keeps JSON-friendly."""
+
     UPDATED = "updated"
     SKIPPED = "skipped"
     ERROR = "error"
@@ -50,6 +51,7 @@ class RunResult:
 # Safety checks
 # ---------------------------------------------------------------------------
 
+
 def _is_repo_dirty(repo: Repo) -> bool:
     return repo.is_dirty(untracked_files=True)
 
@@ -76,6 +78,7 @@ def _get_current_branch(repo: Repo) -> str | None:
 # Validate repo state before update
 # ---------------------------------------------------------------------------
 
+
 def _validate_repo(cached: CachedRepo) -> tuple[Repo, str, RepoResult | None]:
     """Open the repo, check preconditions.
 
@@ -88,27 +91,51 @@ def _validate_repo(cached: CachedRepo) -> tuple[Repo, str, RepoResult | None]:
     try:
         repo = Repo(cached.path)
     except InvalidGitRepositoryError:
-        return Repo.__new__(Repo), "", RepoResult(
-            path=cached.path, status=RepoStatus.ERROR, message="Invalid git repo",
+        return (
+            Repo.__new__(Repo),
+            "",
+            RepoResult(
+                path=cached.path,
+                status=RepoStatus.ERROR,
+                message="Invalid git repo",
+            ),
         )
 
     current = _get_current_branch(repo)
     if current is None:
         log.info("  %s: detached HEAD, skipping", name)
-        return repo, "", RepoResult(
-            path=cached.path, status=RepoStatus.SKIPPED, message="Detached HEAD",
+        return (
+            repo,
+            "",
+            RepoResult(
+                path=cached.path,
+                status=RepoStatus.SKIPPED,
+                message="Detached HEAD",
+            ),
         )
 
     if _is_repo_dirty(repo):
         log.info("  %s: dirty working tree, skipping", name)
-        return repo, current, RepoResult(
-            path=cached.path, status=RepoStatus.SKIPPED, message="Dirty working tree",
+        return (
+            repo,
+            current,
+            RepoResult(
+                path=cached.path,
+                status=RepoStatus.SKIPPED,
+                message="Dirty working tree",
+            ),
         )
 
     if _is_mid_rebase_or_merge(repo):
         log.info("  %s: mid-rebase/merge, skipping", name)
-        return repo, current, RepoResult(
-            path=cached.path, status=RepoStatus.SKIPPED, message="Mid-rebase or merge",
+        return (
+            repo,
+            current,
+            RepoResult(
+                path=cached.path,
+                status=RepoStatus.SKIPPED,
+                message="Mid-rebase or merge",
+            ),
         )
 
     return repo, current, None
@@ -117,6 +144,7 @@ def _validate_repo(cached: CachedRepo) -> tuple[Repo, str, RepoResult | None]:
 # ---------------------------------------------------------------------------
 # Branch update operations
 # ---------------------------------------------------------------------------
+
 
 def _update_branch(
     repo: Repo,
@@ -165,6 +193,7 @@ def _try_rebase(repo: Repo, current: str, target: str, dry_run: bool) -> None:
 # ---------------------------------------------------------------------------
 # Single-repo orchestrator
 # ---------------------------------------------------------------------------
+
 
 def _update_single_repo(
     cached: CachedRepo,
@@ -224,6 +253,7 @@ def _update_single_repo(
 # Full run
 # ---------------------------------------------------------------------------
 
+
 def run_update(
     cache: RepoCache,
     config: Config,
@@ -264,6 +294,8 @@ def run_update(
 
     log.info(
         "Run complete: %d updated, %d skipped, %d errors",
-        result.updated, result.skipped, result.errors,
+        result.updated,
+        result.skipped,
+        result.errors,
     )
     return result

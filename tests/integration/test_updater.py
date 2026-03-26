@@ -9,9 +9,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-from git import Repo
-
 from git_pulse.cache import CachedRepo, RepoCache
 from git_pulse.config import Config
 from git_pulse.updater import run_update
@@ -174,7 +171,8 @@ class TestSafetyGuardrails:
         fake.mkdir()
 
         monkeypatch.setattr(
-            "git_pulse.updater.probe_connectivity", lambda path: True,
+            "git_pulse.updater.probe_connectivity",
+            lambda path: True,
         )
 
         cache = RepoCache(repos=[CachedRepo(path=str(fake), matching_branches=["master"])])
@@ -269,7 +267,7 @@ class TestMultiRepoRun:
     def test_processes_all_repos(self, tmp_path: Path):
         repos_data = []
         for name in ["a", "b", "c"]:
-            remote, local, repo = create_repo_pair(tmp_path, name)
+            remote, local, _repo = create_repo_pair(tmp_path, name)
             push_remote_commit(remote, "master")
             repos_data.append(CachedRepo(path=str(local), matching_branches=["master"]))
 
@@ -288,10 +286,12 @@ class TestMultiRepoRun:
         _, local_dirty, _ = create_repo_pair(tmp_path, "dirty")
         (local_dirty / "dirt.txt").write_text("dirty")
 
-        cache = RepoCache(repos=[
-            CachedRepo(path=str(local_ok), matching_branches=["master"]),
-            CachedRepo(path=str(local_dirty), matching_branches=["master"]),
-        ])
+        cache = RepoCache(
+            repos=[
+                CachedRepo(path=str(local_ok), matching_branches=["master"]),
+                CachedRepo(path=str(local_dirty), matching_branches=["master"]),
+            ]
+        )
         result = run_update(cache, Config(branches_to_update=["master"]))
 
         assert result.total == 2

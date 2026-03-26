@@ -6,7 +6,6 @@ of the user's branches_to_update exist in each, and maintains the cache.
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from git import InvalidGitRepositoryError, Repo
@@ -60,9 +59,7 @@ def _find_git_repos(
 
     for entry in entries:
         if entry.is_dir() and not entry.name.startswith("."):
-            repos.extend(
-                _find_git_repos(entry, max_depth, exclude_paths, _current_depth + 1)
-            )
+            repos.extend(_find_git_repos(entry, max_depth, exclude_paths, _current_depth + 1))
 
     return repos
 
@@ -95,12 +92,8 @@ def full_scan(config: Config) -> RepoCache:
         for repo_path in discovered:
             matched = _matching_branches(repo_path, config.branches_to_update)
             if matched:
-                all_repos.append(
-                    CachedRepo(path=str(repo_path), matching_branches=matched)
-                )
-                log.debug(
-                    "  %s -> branches: %s", repo_path.name, ", ".join(matched)
-                )
+                all_repos.append(CachedRepo(path=str(repo_path), matching_branches=matched))
+                log.debug("  %s -> branches: %s", repo_path.name, ", ".join(matched))
             else:
                 log.debug("  %s -> no matching branches, skipping", repo_path.name)
 
@@ -135,9 +128,7 @@ def _quick_discover_new_repos(cache: RepoCache, config: Config) -> list[CachedRe
             if str(repo_path) not in known_paths:
                 matched = _matching_branches(repo_path, config.branches_to_update)
                 if matched:
-                    new_repos.append(
-                        CachedRepo(path=str(repo_path), matching_branches=matched)
-                    )
+                    new_repos.append(CachedRepo(path=str(repo_path), matching_branches=matched))
                     log.info("New repo discovered: %s (%s)", repo_path.name, ", ".join(matched))
 
     return new_repos

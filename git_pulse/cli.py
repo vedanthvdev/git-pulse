@@ -6,7 +6,6 @@ All user-facing commands are defined here using Typer.
 from __future__ import annotations
 
 import subprocess
-import sys
 from pathlib import Path
 
 import typer
@@ -46,7 +45,12 @@ def _version_callback(value: bool) -> None:
 @app.callback()
 def main(
     version: bool = typer.Option(
-        False, "--version", "-v", help="Show version and exit.", callback=_version_callback, is_eager=True,
+        False,
+        "--version",
+        "-v",
+        help="Show version and exit.",
+        callback=_version_callback,
+        is_eager=True,
     ),
 ) -> None:
     """git-pulse: keep your local repos up to date while you work."""
@@ -105,7 +109,7 @@ def init() -> None:
     console.print(f"\n[green]Config saved to {CONFIG_FILE}[/green]")
 
     console.print("\nRunning initial scan ...")
-    log = setup_logging(config.log_level, console=False)
+    setup_logging(config.log_level, console=False)
     cache = full_scan(config)
     console.print(f"[green]Found {len(cache.repos)} repo(s)[/green]\n")
 
@@ -117,12 +121,14 @@ def init() -> None:
 
 @app.command()
 def run(
-    dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Preview actions without executing"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", "-n", help="Preview actions without executing"
+    ),
     background: bool = typer.Option(False, "--background", hidden=True),
 ) -> None:
     """Update all cached repos now (one-shot). Used by the daemon and for manual runs."""
     config = load_config()
-    log = setup_logging(config.log_level, console=not background)
+    setup_logging(config.log_level, console=not background)
 
     cache = get_or_build_cache(config)
     result = run_update(cache, config, dry_run=dry_run)
@@ -137,7 +143,9 @@ def run(
 
 @app.command()
 def sync(
-    dry_run: bool = typer.Option(False, "--dry-run", "-n", help="Preview actions without executing"),
+    dry_run: bool = typer.Option(
+        False, "--dry-run", "-n", help="Preview actions without executing"
+    ),
 ) -> None:
     """Manually trigger an update of all repos right now."""
     run(dry_run=dry_run, background=False)
@@ -183,7 +191,9 @@ def status() -> None:
     table.add_column("Value")
 
     table.add_row("Version", __version__)
-    table.add_row("Daemon running", "[green]yes[/green]" if info.get("running") == "yes" else "[red]no[/red]")
+    table.add_row(
+        "Daemon running", "[green]yes[/green]" if info.get("running") == "yes" else "[red]no[/red]"
+    )
     if info.get("backend"):
         table.add_row("Backend", info["backend"])
     if info.get("reason"):
@@ -251,7 +261,7 @@ def config_cmd(
         console.print(f"[green]{key} = {getattr(updated, key)}[/green]")
     except (KeyError, ValueError) as exc:
         console.print(f"[red]{exc}[/red]")
-        raise typer.Exit(code=1)
+        raise typer.Exit(code=1) from None
 
 
 @app.command("list")
@@ -281,7 +291,9 @@ def list_repos() -> None:
             current = "[dim]unknown[/dim]"
 
         is_on_tracked = current in cached.matching_branches
-        current_display = f"[green]{current}[/green]" if is_on_tracked else f"[cyan]{current}[/cyan]"
+        current_display = (
+            f"[green]{current}[/green]" if is_on_tracked else f"[cyan]{current}[/cyan]"
+        )
 
         table.add_row(
             str(i),

@@ -6,9 +6,8 @@ Tests with local file:// remotes (always reachable) and invalid paths.
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-import pytest
 from git import GitCommandError
 
 from git_pulse.connectivity import probe_connectivity
@@ -34,7 +33,9 @@ class TestProbeConnectivity:
     @patch("git_pulse.connectivity.Repo")
     def test_handles_git_command_error(self, mock_repo_cls):
         mock_repo = MagicMock()
-        mock_repo.git.ls_remote.side_effect = GitCommandError("ls-remote", 128, stderr="fatal: no remote")
+        mock_repo.git.ls_remote.side_effect = GitCommandError(
+            "ls-remote", 128, stderr="fatal: no remote"
+        )
         mock_repo_cls.return_value = mock_repo
 
         assert probe_connectivity("/fake") is False

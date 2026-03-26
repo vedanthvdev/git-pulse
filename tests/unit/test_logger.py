@@ -8,12 +8,11 @@ from __future__ import annotations
 
 import logging
 from logging.handlers import RotatingFileHandler
-from pathlib import Path
 
 import pytest
 
 import git_pulse.logger as logger_mod
-from git_pulse.logger import setup_logging, get_logger, reset_logging
+from git_pulse.logger import get_logger, reset_logging, setup_logging
 
 
 @pytest.fixture(autouse=True)
@@ -41,16 +40,14 @@ class TestSetupLogging:
 
     def test_file_handler_attached(self):
         logger = setup_logging("INFO", console=False)
-        file_handlers = [
-            h for h in logger.handlers
-            if isinstance(h, RotatingFileHandler)
-        ]
+        file_handlers = [h for h in logger.handlers if isinstance(h, RotatingFileHandler)]
         assert len(file_handlers) >= 1
 
     def test_console_handler_when_enabled(self, monkeypatch: pytest.MonkeyPatch):
         monkeypatch.setattr("git_pulse.logger._configured", False)
         logger = setup_logging("INFO", console=True)
         from rich.logging import RichHandler
+
         rich_handlers = [h for h in logger.handlers if isinstance(h, RichHandler)]
         assert len(rich_handlers) >= 1
 
@@ -60,6 +57,7 @@ class TestSetupLogging:
         logger.handlers.clear()
         logger = setup_logging("INFO", console=False)
         from rich.logging import RichHandler
+
         rich_handlers = [h for h in logger.handlers if isinstance(h, RichHandler)]
         assert len(rich_handlers) == 0
 

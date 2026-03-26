@@ -12,12 +12,11 @@ import pytest
 import yaml
 
 from git_pulse.config import (
-    Config,
-    ConfigError,
-    MIN_INTERVAL_MINUTES,
     MAX_INTERVAL_MINUTES,
-    MIN_SCAN_DEPTH,
     MAX_SCAN_DEPTH,
+    MIN_INTERVAL_MINUTES,
+    MIN_SCAN_DEPTH,
+    Config,
     _ensure_list,
     config_exists,
     load_config,
@@ -43,9 +42,13 @@ class TestConfigDefaults:
         assert d["scan_paths"] == ["~/a"]
         assert d["interval_minutes"] == 30
         assert set(d.keys()) == {
-            "scan_paths", "scan_depth", "interval_minutes",
-            "branches_to_update", "fast_forward_rebase",
-            "exclude_paths", "log_level",
+            "scan_paths",
+            "scan_depth",
+            "interval_minutes",
+            "branches_to_update",
+            "fast_forward_rebase",
+            "exclude_paths",
+            "log_level",
         }
 
 
@@ -79,6 +82,7 @@ class TestConfigPersistence:
     def test_load_fills_missing_keys_with_defaults(self, tmp_path: Path):
         """A config file with only some keys should still load with defaults for the rest."""
         from git_pulse.config import CONFIG_DIR, CONFIG_FILE
+
         CONFIG_DIR.mkdir(parents=True, exist_ok=True)
         with open(CONFIG_FILE, "w") as f:
             yaml.dump({"scan_paths": ["~/partial"]}, f)
@@ -233,6 +237,7 @@ class TestEnsureList:
 class TestCorruptConfig:
     def test_load_invalid_yaml_returns_defaults(self):
         from git_pulse.config import CONFIG_DIR, CONFIG_FILE
+
         CONFIG_DIR.mkdir(parents=True, exist_ok=True)
         CONFIG_FILE.write_text(": : :\ninvalid yaml {{[[")
         config = load_config()
@@ -241,6 +246,7 @@ class TestCorruptConfig:
 
     def test_load_non_dict_yaml_returns_defaults(self):
         from git_pulse.config import CONFIG_DIR, CONFIG_FILE
+
         CONFIG_DIR.mkdir(parents=True, exist_ok=True)
         CONFIG_FILE.write_text("- just\n- a\n- list\n")
         config = load_config()

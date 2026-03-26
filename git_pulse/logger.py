@@ -7,12 +7,10 @@ from __future__ import annotations
 
 import logging
 from logging.handlers import RotatingFileHandler
-from pathlib import Path
 
 from rich.logging import RichHandler
 
 from git_pulse.config import CONFIG_DIR
-
 
 LOG_DIR = CONFIG_DIR / "logs"
 LOG_FILE = LOG_DIR / "git-pulse.log"

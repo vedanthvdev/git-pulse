@@ -9,8 +9,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
-
 import git_pulse.cache as cache_mod
 from git_pulse.cache import (
     CachedRepo,
@@ -36,11 +34,13 @@ class TestCachedRepo:
 
 class TestRepoCache:
     def test_repo_paths_property(self):
-        cache = RepoCache(repos=[
-            CachedRepo(path="/a", matching_branches=["master"]),
-            CachedRepo(path="/b", matching_branches=["main"]),
-            CachedRepo(path="/c", matching_branches=["master", "main"]),
-        ])
+        cache = RepoCache(
+            repos=[
+                CachedRepo(path="/a", matching_branches=["master"]),
+                CachedRepo(path="/b", matching_branches=["main"]),
+                CachedRepo(path="/c", matching_branches=["master", "main"]),
+            ]
+        )
         assert cache.repo_paths == {"/a", "/b", "/c"}
 
     def test_repo_paths_empty(self):
@@ -157,10 +157,12 @@ class TestRemoveMissingRepos:
         existing = tmp_path / "exists"
         existing.mkdir()
 
-        cache = RepoCache(repos=[
-            CachedRepo(path=str(existing), matching_branches=["master"]),
-            CachedRepo(path="/nonexistent/repo", matching_branches=["main"]),
-        ])
+        cache = RepoCache(
+            repos=[
+                CachedRepo(path=str(existing), matching_branches=["master"]),
+                CachedRepo(path="/nonexistent/repo", matching_branches=["main"]),
+            ]
+        )
 
         removed = remove_missing_repos(cache)
         assert removed == ["/nonexistent/repo"]
@@ -176,10 +178,12 @@ class TestRemoveMissingRepos:
         assert len(cache.repos) == 1
 
     def test_all_removed(self):
-        cache = RepoCache(repos=[
-            CachedRepo(path="/gone1", matching_branches=["master"]),
-            CachedRepo(path="/gone2", matching_branches=["main"]),
-        ])
+        cache = RepoCache(
+            repos=[
+                CachedRepo(path="/gone1", matching_branches=["master"]),
+                CachedRepo(path="/gone2", matching_branches=["main"]),
+            ]
+        )
         removed = remove_missing_repos(cache)
         assert len(removed) == 2
         assert cache.repos == []

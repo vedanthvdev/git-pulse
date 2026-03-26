@@ -15,7 +15,6 @@ from typing import Any
 
 import yaml
 
-
 CONFIG_DIR = Path.home() / ".git-pulse"
 CONFIG_FILE = CONFIG_DIR / "config.yml"
 
@@ -51,10 +50,14 @@ class Config:
 
     def __post_init__(self) -> None:
         self.interval_minutes = _clamp(
-            self.interval_minutes, MIN_INTERVAL_MINUTES, MAX_INTERVAL_MINUTES,
+            self.interval_minutes,
+            MIN_INTERVAL_MINUTES,
+            MAX_INTERVAL_MINUTES,
         )
         self.scan_depth = _clamp(
-            self.scan_depth, MIN_SCAN_DEPTH, MAX_SCAN_DEPTH,
+            self.scan_depth,
+            MIN_SCAN_DEPTH,
+            MAX_SCAN_DEPTH,
         )
 
     @property
@@ -115,7 +118,9 @@ def load_config() -> Config:
             raw = yaml.safe_load(f) or {}
     except (yaml.YAMLError, OSError) as exc:
         logging.getLogger("git_pulse").warning(
-            "Failed to parse config (%s), using defaults: %s", CONFIG_FILE, exc,
+            "Failed to parse config (%s), using defaults: %s",
+            CONFIG_FILE,
+            exc,
         )
         return Config(**DEFAULTS)
 

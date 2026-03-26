@@ -6,20 +6,16 @@ Does NOT call launchctl or systemctl — only tests string generation and backen
 
 from __future__ import annotations
 
-import platform
 from unittest.mock import patch
 
-import pytest
-
 from git_pulse.daemon import (
+    PLIST_LABEL,
     DaemonBackend,
     LaunchdBackend,
     SystemdBackend,
     UnsupportedBackend,
     _find_git_pulse_bin,
     _get_backend,
-    daemon_status,
-    PLIST_LABEL,
 )
 
 

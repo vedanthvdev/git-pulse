@@ -9,10 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-from git import Repo
-
-from git_pulse.cache import load_cache, save_cache, RepoCache, CachedRepo
+from git_pulse.cache import load_cache
 from git_pulse.config import Config
 from git_pulse.scanner import full_scan, get_or_build_cache
 from tests.helpers.git_helpers import create_repo_pair, make_bare_remote, make_local_repo
@@ -22,7 +19,7 @@ class TestFullScan:
     def test_discovers_single_repo(self, tmp_path: Path):
         scan_dir = tmp_path / "repos"
         scan_dir.mkdir()
-        _, local, _ = create_repo_pair(tmp_path, "alpha")
+        _, _local, _ = create_repo_pair(tmp_path, "alpha")
         config = Config(scan_paths=[str(tmp_path / "repos")], branches_to_update=["master"])
         cache = full_scan(config)
 
@@ -58,7 +55,7 @@ class TestFullScan:
         """A repo that has both master and main should report both."""
         scan_dir = tmp_path / "repos"
         scan_dir.mkdir()
-        remote, local, repo = create_repo_pair(tmp_path, "dual")
+        _remote, _local, repo = create_repo_pair(tmp_path, "dual")
         repo.git.checkout("-b", "main")
         repo.git.push("origin", "main")
         repo.git.checkout("master")
@@ -111,7 +108,9 @@ class TestFullScan:
         cache = full_scan(config)
         assert len(cache.repos) == 0
 
-        config_deep = Config(scan_paths=[str(scan_dir)], scan_depth=5, branches_to_update=["master"])
+        config_deep = Config(
+            scan_paths=[str(scan_dir)], scan_depth=5, branches_to_update=["master"]
+        )
         cache_deep = full_scan(config_deep)
         assert len(cache_deep.repos) == 1
 
@@ -153,7 +152,7 @@ class TestGetOrBuildCache:
         create_repo_pair(tmp_path, "cached")
 
         config = Config(scan_paths=[str(scan_dir)], branches_to_update=["master"])
-        cache1 = get_or_build_cache(config)
+        get_or_build_cache(config)
         cache2 = get_or_build_cache(config)
         assert len(cache2.repos) == 1
 
@@ -180,6 +179,7 @@ class TestGetOrBuildCache:
         assert len(cache.repos) == 1
 
         import shutil
+
         shutil.rmtree(local)
 
         cache = get_or_build_cache(config)

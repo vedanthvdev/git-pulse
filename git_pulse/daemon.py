@@ -24,6 +24,7 @@ PLIST_LABEL = "com.git-pulse.updater"
 # Backend interface
 # ---------------------------------------------------------------------------
 
+
 class DaemonBackend(abc.ABC):
     @abc.abstractmethod
     def install(self, config: Config) -> str: ...
@@ -38,6 +39,7 @@ class DaemonBackend(abc.ABC):
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
+
 
 def _find_git_pulse_bin() -> str:
     """Resolve the absolute path to the git-pulse binary.
@@ -54,6 +56,7 @@ def _find_git_pulse_bin() -> str:
 # ---------------------------------------------------------------------------
 # macOS launchd backend
 # ---------------------------------------------------------------------------
+
 
 class LaunchdBackend(DaemonBackend):
     def __init__(self) -> None:
@@ -75,7 +78,8 @@ class LaunchdBackend(DaemonBackend):
 
         result = subprocess.run(
             ["launchctl", "load", str(self.plist_path)],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         if result.returncode != 0:
             log.warning("launchctl load failed: %s", result.stderr.strip())
@@ -85,7 +89,6 @@ class LaunchdBackend(DaemonBackend):
         return f"Daemon started (launchd, every {interval_seconds // 60} min)"
 
     def uninstall(self) -> str:
-        log = get_logger()
         self._unload()
         return "Daemon stopped and plist removed"
 
@@ -94,7 +97,8 @@ class LaunchdBackend(DaemonBackend):
             return {"running": "no", "reason": "Plist not installed"}
         result = subprocess.run(
             ["launchctl", "list", PLIST_LABEL],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         if result.returncode == 0:
             return {"running": "yes", "backend": "launchd", "label": PLIST_LABEL}
@@ -149,6 +153,7 @@ class LaunchdBackend(DaemonBackend):
 # Linux systemd backend
 # ---------------------------------------------------------------------------
 
+
 class SystemdBackend(DaemonBackend):
     def __init__(self) -> None:
         self.systemd_dir = Path.home() / ".config" / "systemd" / "user"
@@ -168,7 +173,8 @@ class SystemdBackend(DaemonBackend):
         subprocess.run(["systemctl", "--user", "daemon-reload"], capture_output=True)
         result = subprocess.run(
             ["systemctl", "--user", "enable", "--now", self.timer_name],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         if result.returncode != 0:
             log.warning("systemctl enable failed: %s", result.stderr.strip())
@@ -192,7 +198,8 @@ class SystemdBackend(DaemonBackend):
     def status(self) -> dict[str, str]:
         result = subprocess.run(
             ["systemctl", "--user", "is-active", self.timer_name],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         if result.stdout.strip() == "active":
             return {"running": "yes", "backend": "systemd", "timer": self.timer_name}
@@ -231,6 +238,7 @@ class SystemdBackend(DaemonBackend):
 # Unsupported platform fallback
 # ---------------------------------------------------------------------------
 
+
 class UnsupportedBackend(DaemonBackend):
     def install(self, config: Config) -> str:
         return f"Unsupported platform: {platform.system()}"
@@ -246,6 +254,7 @@ class UnsupportedBackend(DaemonBackend):
 # Backend selection
 # ---------------------------------------------------------------------------
 
+
 def _get_backend() -> DaemonBackend:
     system = platform.system()
     if system == "Darwin":
@@ -258,6 +267,7 @@ def _get_backend() -> DaemonBackend:
 # ---------------------------------------------------------------------------
 # Public API (unchanged signatures for CLI compatibility)
 # ---------------------------------------------------------------------------
+
 
 def install_daemon(config: Config) -> str:
     return _get_backend().install(config)
