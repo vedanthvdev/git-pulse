@@ -6,6 +6,7 @@ pipeline: config creation, scanning, updating, and output formatting.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,12 @@ from git_pulse.scanner import full_scan
 from tests.helpers.git_helpers import create_repo_pair, push_remote_commit
 
 runner = CliRunner()
+
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _strip_ansi(text: str) -> str:
+    return _ANSI_RE.sub("", text)
 
 
 @pytest.fixture()
@@ -74,7 +81,7 @@ class TestHelp:
     def test_run_help(self):
         result = runner.invoke(app, ["run", "--help"])
         assert result.exit_code == 0
-        assert "--dry-run" in result.output
+        assert "--dry-run" in _strip_ansi(result.output)
 
 
 class TestScanCommand:
