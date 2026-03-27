@@ -19,6 +19,8 @@ from git_pulse.updater import (
     _get_current_branch,
     _is_mid_rebase_or_merge,
     _is_repo_dirty,
+    _stash_pop,
+    _stash_save,
     _update_branch,
     _validate_repo,
 )
@@ -178,17 +180,18 @@ class TestValidateRepo:
         assert result.status == RepoStatus.SKIPPED
         assert "Detached HEAD" in result.message
 
-    def test_returns_skip_for_dirty_repo(self, tmp_path: Path):
+    def test_dirty_repo_passes_validation(self, tmp_path: Path):
+        """Dirty repos are no longer rejected by _validate_repo — stash handles them."""
         remote = tmp_path / "r.git"
         local = tmp_path / "l"
         make_bare_remote(remote)
         make_local_repo(local, remote)
-        (local / "untracked.txt").write_text("dirty")
+        (local / "README.md").write_text("modified content")
 
         cached = CachedRepo(path=str(local), matching_branches=["master"])
-        _, _, result = _validate_repo(cached)
-        assert result is not None
-        assert result.status == RepoStatus.SKIPPED
+        _, current, result = _validate_repo(cached)
+        assert result is None
+        assert current == "master"
 
     def test_returns_none_for_valid_repo(self, tmp_path: Path):
         remote = tmp_path / "r.git"
@@ -239,3 +242,73 @@ class TestUpdateBranch:
         old_sha = repo.head.commit.hexsha
         assert _update_branch(repo, "master", "master", dry_run=True) is True
         assert repo.head.commit.hexsha == old_sha
+
+
+class TestStashSaveAndPop:
+    def test_stash_save_with_modified_file(self, tmp_path: Path):
+        remote = tmp_path / "r.git"
+        local = tmp_path / "l"
+        make_bare_remote(remote)
+        make_local_repo(local, remote)
+        (local / "README.md").write_text("modified")
+        repo = Repo(str(local))
+
+        assert _stash_save(repo) is True
+        assert not repo.is_dirty(untracked_files=True)
+
+    def test_stash_save_with_untracked_file(self, tmp_path: Path):
+        remote = tmp_path / "r.git"
+        local = tmp_path / "l"
+        make_bare_remote(remote)
+        make_local_repo(local, remote)
+        (local / "newfile.txt").write_text("untracked")
+        repo = Repo(str(local))
+
+        assert _stash_save(repo) is True
+        assert not (local / "newfile.txt").exists()
+
+    def test_stash_save_on_clean_repo_returns_false(self, tmp_path: Path):
+        remote = tmp_path / "r.git"
+        local = tmp_path / "l"
+        make_bare_remote(remote)
+        make_local_repo(local, remote)
+        repo = Repo(str(local))
+
+        assert _stash_save(repo) is False
+
+    def test_stash_pop_restores_changes(self, tmp_path: Path):
+        remote = tmp_path / "r.git"
+        local = tmp_path / "l"
+        make_bare_remote(remote)
+        make_local_repo(local, remote)
+        (local / "README.md").write_text("modified")
+        repo = Repo(str(local))
+
+        _stash_save(repo)
+        assert not repo.is_dirty()
+        assert _stash_pop(repo) is True
+        assert (local / "README.md").read_text() == "modified"
+
+    def test_stash_roundtrip_with_update(self, tmp_path: Path):
+        """Full flow: dirty repo -> stash -> update master -> pop -> changes restored."""
+        remote = tmp_path / "r.git"
+        local = tmp_path / "l"
+        make_bare_remote(remote)
+        make_local_repo(local, remote)
+        repo = Repo(str(local))
+
+        repo.git.checkout("-b", "feature/test")
+        (local / "mywork.txt").write_text("work in progress")
+        repo.index.add(["mywork.txt"])
+        (local / "README.md").write_text("local edits")
+
+        push_remote_commit(remote, "master")
+        old_master = repo.refs["master"].commit.hexsha
+
+        assert _stash_save(repo) is True
+        assert _update_branch(repo, "master", "feature/test", dry_run=False) is True
+        assert _stash_pop(repo) is True
+
+        assert repo.refs["master"].commit.hexsha != old_master
+        assert (local / "README.md").read_text() == "local edits"
+        assert (local / "mywork.txt").exists()

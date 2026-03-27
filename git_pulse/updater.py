@@ -114,18 +114,6 @@ def _validate_repo(cached: CachedRepo) -> tuple[Repo, str, RepoResult | None]:
             ),
         )
 
-    if _is_repo_dirty(repo):
-        log.info("  %s: dirty working tree, skipping", name)
-        return (
-            repo,
-            current,
-            RepoResult(
-                path=cached.path,
-                status=RepoStatus.SKIPPED,
-                message="Dirty working tree",
-            ),
-        )
-
     if _is_mid_rebase_or_merge(repo):
         log.info("  %s: mid-rebase/merge, skipping", name)
         return (
@@ -195,6 +183,29 @@ def _try_rebase(repo: Repo, current: str, target: str, dry_run: bool) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _stash_save(repo: Repo) -> bool:
+    """Stash all local changes (tracked + untracked). Returns True if a stash was created."""
+    before = len(repo.git.stash("list").splitlines()) if repo.git.stash("list") else 0
+    repo.git.stash("push", "--include-untracked", "-m", "git-pulse: auto-stash")
+    after = len(repo.git.stash("list").splitlines()) if repo.git.stash("list") else 0
+    return after > before
+
+
+def _stash_pop(repo: Repo) -> bool:
+    """Pop the most recent stash. Returns True on success, False on conflict."""
+    log = get_logger()
+    name = Path(repo.working_dir).name
+    try:
+        repo.git.stash("pop")
+        return True
+    except GitCommandError:
+        log.warning(
+            "  %s: stash pop had conflicts — your changes are preserved in 'git stash list'",
+            name,
+        )
+        return False
+
+
 def _update_single_repo(
     cached: CachedRepo,
     config: Config,
@@ -206,20 +217,45 @@ def _update_single_repo(
     if early_result is not None:
         return early_result
 
+    name = Path(cached.path).name
+    dirty = _is_repo_dirty(repo)
+    stashed = False
+
+    if dirty:
+        if dry_run:
+            log.info("  %s: [dry-run] would stash, update, then pop", name)
+        else:
+            log.debug("  %s: stashing local changes before update", name)
+            try:
+                stashed = _stash_save(repo)
+            except GitCommandError as exc:
+                msg = exc.stderr.strip() if exc.stderr else str(exc)
+                log.warning("  %s: failed to stash: %s, skipping", name, msg)
+                return RepoResult(
+                    path=cached.path,
+                    status=RepoStatus.SKIPPED,
+                    message="Could not stash local changes",
+                )
+
     branches_updated: list[str] = []
     branches_failed: list[str] = []
 
-    for branch in cached.matching_branches:
-        try:
-            _update_branch(repo, branch, current, dry_run)
-            branches_updated.append(branch)
-        except GitCommandError as exc:
-            msg = exc.stderr.strip() if exc.stderr else str(exc)
-            log.warning("  %s: failed to update %s: %s", Path(cached.path).name, branch, msg)
-            branches_failed.append(branch)
+    try:
+        for branch in cached.matching_branches:
+            try:
+                _update_branch(repo, branch, current, dry_run)
+                branches_updated.append(branch)
+            except GitCommandError as exc:
+                msg = exc.stderr.strip() if exc.stderr else str(exc)
+                log.warning("  %s: failed to update %s: %s", name, branch, msg)
+                branches_failed.append(branch)
 
-    if config.fast_forward_rebase and current not in cached.matching_branches and branches_updated:
-        _try_rebase(repo, current, branches_updated[0], dry_run)
+        if config.fast_forward_rebase and current not in cached.matching_branches and branches_updated:
+            _try_rebase(repo, current, branches_updated[0], dry_run)
+    finally:
+        if stashed:
+            log.debug("  %s: restoring stashed changes", name)
+            _stash_pop(repo)
 
     if branches_updated and not branches_failed:
         return RepoResult(

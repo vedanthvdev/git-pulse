@@ -106,35 +106,39 @@ class TestMultiBranchUpdate:
 
 
 class TestSafetyGuardrails:
-    def test_skips_dirty_repo_untracked(self, tmp_path: Path):
-        _, local, _ = create_repo_pair(tmp_path, "dirty-untracked")
+    def test_stashes_and_updates_dirty_repo_untracked(self, tmp_path: Path):
+        remote, local, _ = create_repo_pair(tmp_path, "dirty-untracked")
         (local / "untracked.txt").write_text("dirty")
+        push_remote_commit(remote, "master")
 
         cache = RepoCache(repos=[CachedRepo(path=str(local), matching_branches=["master"])])
         result = run_update(cache, Config(branches_to_update=["master"]))
 
-        assert result.skipped == 1
-        assert result.results[0].message == "Dirty working tree"
+        assert result.updated == 1
+        assert (local / "untracked.txt").read_text() == "dirty"
 
-    def test_skips_dirty_repo_staged(self, tmp_path: Path):
-        _, local, repo = create_repo_pair(tmp_path, "dirty-staged")
+    def test_stashes_and_updates_dirty_repo_staged(self, tmp_path: Path):
+        remote, local, repo = create_repo_pair(tmp_path, "dirty-staged")
         (local / "staged.txt").write_text("staged")
         repo.index.add(["staged.txt"])
+        push_remote_commit(remote, "master")
 
         cache = RepoCache(repos=[CachedRepo(path=str(local), matching_branches=["master"])])
         result = run_update(cache, Config(branches_to_update=["master"]))
 
-        assert result.skipped == 1
-        assert result.results[0].message == "Dirty working tree"
+        assert result.updated == 1
+        assert (local / "staged.txt").exists()
 
-    def test_skips_dirty_repo_modified(self, tmp_path: Path):
-        _, local, _ = create_repo_pair(tmp_path, "dirty-modified")
+    def test_stashes_and_updates_dirty_repo_modified(self, tmp_path: Path):
+        remote, local, _ = create_repo_pair(tmp_path, "dirty-modified")
         (local / "README.md").write_text("changed")
+        push_remote_commit(remote, "master")
 
         cache = RepoCache(repos=[CachedRepo(path=str(local), matching_branches=["master"])])
         result = run_update(cache, Config(branches_to_update=["master"]))
 
-        assert result.skipped == 1
+        assert result.updated == 1
+        assert (local / "README.md").read_text() == "changed"
 
     def test_skips_detached_head(self, tmp_path: Path):
         _, local, repo = create_repo_pair(tmp_path, "detached")
@@ -283,8 +287,9 @@ class TestMultiRepoRun:
         remote_ok, local_ok, _ = create_repo_pair(tmp_path, "ok")
         push_remote_commit(remote_ok, "master")
 
-        _, local_dirty, _ = create_repo_pair(tmp_path, "dirty")
+        remote_dirty, local_dirty, _ = create_repo_pair(tmp_path, "dirty")
         (local_dirty / "dirt.txt").write_text("dirty")
+        push_remote_commit(remote_dirty, "master")
 
         cache = RepoCache(
             repos=[
@@ -295,5 +300,5 @@ class TestMultiRepoRun:
         result = run_update(cache, Config(branches_to_update=["master"]))
 
         assert result.total == 2
-        assert result.updated == 1
-        assert result.skipped == 1
+        assert result.updated == 2
+        assert (local_dirty / "dirt.txt").read_text() == "dirty"
